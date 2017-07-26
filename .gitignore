@@ -1,0 +1,16 @@
+*.class
+/bin/
+/.settings/
+.project
+.classpath
+
+# Package Files
+*.jar
+*.war
+*.ear
+
+# Serverless directories
+.serverless
+/src/main/java/com/serverless/rekognition/example/
+/.idea/
+/target/
