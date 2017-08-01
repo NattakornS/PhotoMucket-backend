@@ -5,6 +5,7 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
+import com.amazonaws.services.dynamodbv2.document.Item;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
@@ -12,6 +13,7 @@ import com.amazonaws.services.rekognition.AmazonRekognition;
 import com.amazonaws.services.rekognition.AmazonRekognitionClientBuilder;
 import com.amazonaws.services.rekognition.model.*;
 import com.serverless.rekognition.config.Config;
+import com.serverless.rekognition.config.TableHeader;
 import org.apache.log4j.Logger;
 
 import java.util.Collections;
@@ -21,6 +23,7 @@ import java.util.Map;
 public class postUserDataHandler implements RequestHandler<Map<String, Object>, ApiGatewayResponse> {
 
     private static final Logger LOG = Logger.getLogger(postUserDataHandler.class);
+
 
     @Override
     public ApiGatewayResponse handleRequest(Map<String, Object> input, Context context) {
@@ -75,13 +78,31 @@ public class postUserDataHandler implements RequestHandler<Map<String, Object>, 
         }
         System.out.println(faceDetectTxt);
         input.put("FaceDetect", faceDetectTxt);
-        Response response = new Response("FaceDetect", input);
+        Response response = new Response(Config.ResponeseKey, input);
 
         DynamoDB dynamoDB = new DynamoDB(amazonDynamoDB);
 
         Table table = dynamoDB.getTable("user-data");
 
-//        amazonDynamoDB.putItem()
+        String sureName = "";
+        String name = "";
+        String nickName = "";
+        String email = "";
+        String faceId = "";
+        String imageId = "";
+        String imageUrl = "";
+        String phone = "";
+        Item item = new Item()
+                .withPrimaryKey(TableHeader.NAME, name)
+                .withString(TableHeader.SURE_NAME, sureName)
+                .withString(TableHeader.NICK_NAME, nickName)
+                .withString(TableHeader.EMAIL, email)
+                .withString(TableHeader.FACE_ID, faceId)
+                .withString(TableHeader.IMAGE_ID, imageId)
+                .withString(TableHeader.IMAGE_URL, imageUrl)
+                .withString(TableHeader.PHONE, phone);
+
+        table.putItem(item);
 
         return ApiGatewayResponse.builder()
                 .setStatusCode(200)
