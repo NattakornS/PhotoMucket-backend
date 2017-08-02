@@ -12,7 +12,6 @@
 # Happy Coding!
 
 service: rekognition-demo
-
 # You can pin your service to only deploy with a specific Serverless version
 # Check out our docs for more details
 # frameworkVersion: "=X.X.X"
@@ -20,7 +19,9 @@ service: rekognition-demo
 provider:
   name: aws
   runtime: java8
-
+  environment:
+    USER_DYNAMODB_TABLE: ${self:service}-user-${opt:stage, self:provider.stage}
+    BUCKET_NAME: ${self:service}-${self:provider.region}-${opt:stage, self:provider.stage}
 # you can overwrite defaults here
   stage: dev
   region: us-east-1
@@ -134,32 +135,20 @@ resources:
     RekognitionS3:
       Type: AWS::S3::Bucket
       Properties:
-        BucketName: ${self:service}
+        BucketName: ${self:provider.environment.BUCKET_NAME}
     usersTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: usersTable
+        TableName: ${self:provider.environment.USER_DYNAMODB_TABLE}
         AttributeDefinitions:
-          - AttributeName: name
-            AttributeType: S
-          - AttributeName: surename
-            AttributeType: S
-          - AttributeName: nickname
-            AttributeType: S
           - AttributeName: email
             AttributeType: S
-          - AttributeName: phone
-            AttributeType: S
-          - AttributeName: imageurl
-            AttributeType: S
-          - AttributeName: faceid
-            AttributeType: S
-          - AttributeName: imageid
+          - AttributeName: name
             AttributeType: S
         KeySchema:
-          - AttributeName: name
-            KeyType: HASH
           - AttributeName: email
+            KeyType: HASH
+          - AttributeName: name
             KeyType: RANGE
         ProvisionedThroughput:
           ReadCapacityUnits: 1

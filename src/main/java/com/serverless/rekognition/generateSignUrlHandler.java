@@ -16,16 +16,24 @@ import java.net.URL;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 public class generateSignUrlHandler implements RequestHandler<Map<String, Object>, ApiGatewayResponse> {
 
     private static final Logger LOG = Logger.getLogger(generateSignUrlHandler.class);
-    private String prefixUrl = "https://s3-eu-west-1.amazonaws.com/" + Config.BUCKET_NAME + "/";
+    private String prefixUrl = "https://s3-eu-west-1.amazonaws.com/";
 
     @Override
     public ApiGatewayResponse handleRequest(Map<String, Object> input, Context context) {
         LOG.info("received: " + input);
+        String bucket_name = System.getenv(Config.BUCKET_NAME);
+        if (bucket_name == null) {
+            bucket_name = "";
+        }
+        LOG.info("Bucket Name : " + bucket_name);
+        prefixUrl.concat(bucket_name + "/");
+
 //        Response responseBody = new Response("Go Serverless v1.x! Your function executed successfully!", input);
 //		AmazonS3 s3Client = new AmazonS3Client(new ProfileCredentialsProvider());
         AmazonS3 s3client = AmazonS3ClientBuilder.standard().withRegion(Regions.US_EAST_1).withCredentials(DefaultAWSCredentialsProviderChain.getInstance()).build();
@@ -40,15 +48,17 @@ public class generateSignUrlHandler implements RequestHandler<Map<String, Object
         LocalDate parsedDate = LocalDate.parse(text, formatter);
 
         String keyName = parsedDate + File.separator + System.currentTimeMillis();
-        GeneratePresignedUrlRequest generatePresignedUrlRequest = new GeneratePresignedUrlRequest(Config.BUCKET_NAME, keyName);
+        GeneratePresignedUrlRequest generatePresignedUrlRequest = new GeneratePresignedUrlRequest(bucket_name, keyName);
         generatePresignedUrlRequest.setMethod(HttpMethod.PUT);
         generatePresignedUrlRequest.setExpiration(expiration);
 
         URL signUrl = s3client.generatePresignedUrl(generatePresignedUrlRequest);
         String signUrlString = signUrl.toString();
-        input.put("signUrl", signUrlString);
-        input.put("url", prefixUrl + keyName);
-        Response response = new Response("S3SignUrl", input);
+
+        Map<String, Object> output = new HashMap<String, Object>();
+        output.put("signUrl", signUrlString);
+        output.put("url", prefixUrl + keyName);
+        Response response = new Response("S3SignUrl", output);
 
         return ApiGatewayResponse.builder()
                 .setStatusCode(200)

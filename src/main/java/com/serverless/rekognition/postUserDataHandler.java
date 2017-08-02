@@ -61,10 +61,11 @@ public class postUserDataHandler implements RequestHandler<Map<String, Object>, 
 
         String keyName = (String) input.get("key");
 
+        String bucket_name = System.getenv(Config.BUCKET_NAME);
+        String user_table_name = System.getenv(Config.USER_DYNAMODB_TABLE);
 
 
-
-        Image image = getImageUtil(Config.BUCKET_NAME, keyName);
+        Image image = getImageUtil(bucket_name, keyName);
         String externalImageId = "sourceImage.jpg";
         IndexFacesResult indexFacesResult = callIndexFaces(keyName,
                 externalImageId, "ALL", image, amazonRekognition);
@@ -82,7 +83,7 @@ public class postUserDataHandler implements RequestHandler<Map<String, Object>, 
 
         DynamoDB dynamoDB = new DynamoDB(amazonDynamoDB);
 
-        Table table = dynamoDB.getTable("user-data");
+        Table table = dynamoDB.getTable(user_table_name);
 
         String sureName = "";
         String name = "";
