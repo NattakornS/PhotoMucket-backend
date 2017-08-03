@@ -7,6 +7,8 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.Headers;
+import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import com.serverless.rekognition.config.Config;
 import org.apache.log4j.Logger;
@@ -26,7 +28,8 @@ public class generateSignUrlHandler implements RequestHandler<Map<String, Object
 
     @Override
     public ApiGatewayResponse handleRequest(Map<String, Object> input, Context context) {
-        LOG.info("received: " + input);
+        LOG.info("received: " + input.toString());
+        String filetype = (String)input.get("filetype");
         String bucket_name = System.getenv(Config.BUCKET_NAME);
         if (bucket_name == null) {
             bucket_name = "";
@@ -47,9 +50,17 @@ public class generateSignUrlHandler implements RequestHandler<Map<String, Object
         String text = date.format(formatter);
         LocalDate parsedDate = LocalDate.parse(text, formatter);
 
+
         String keyName = parsedDate + File.separator + System.currentTimeMillis();
         GeneratePresignedUrlRequest generatePresignedUrlRequest = new GeneratePresignedUrlRequest(bucket_name, keyName);
         generatePresignedUrlRequest.setMethod(HttpMethod.PUT);
+        generatePresignedUrlRequest.setContentType(filetype);
+        // setting http request header:
+        // x-amx-canned-acl: 'public-read'
+        generatePresignedUrlRequest.addRequestParameter(
+                Headers.S3_CANNED_ACL,
+                CannedAccessControlList.PublicRead.toString()
+        );
         generatePresignedUrlRequest.setExpiration(expiration);
 
         URL signUrl = s3client.generatePresignedUrl(generatePresignedUrlRequest);
@@ -58,7 +69,9 @@ public class generateSignUrlHandler implements RequestHandler<Map<String, Object
         Map<String, Object> output = new HashMap<String, Object>();
         output.put("signUrl", signUrlString);
         output.put("url", prefixUrl + keyName);
-        Response response = new Response("S3SignUrl", output);
+        Response response = new Response("generateURL", output);
+
+//        String body = "signUrl : "+signUrlString+","+"url : " +prefixUrl+keyName;
 
         return ApiGatewayResponse.builder()
                 .setStatusCode(200)
