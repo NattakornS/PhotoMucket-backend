@@ -12,9 +12,11 @@ import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import com.serverless.rekognition.config.Config;
 import org.apache.log4j.Logger;
+import sun.rmi.runtime.Log;
 
 import java.io.File;
 import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
@@ -28,8 +30,9 @@ public class generateSignUrlHandler implements RequestHandler<Map<String, Object
 
     @Override
     public ApiGatewayResponse handleRequest(Map<String, Object> input, Context context) {
-        LOG.info("received: " + input.toString());
-        String filetype = (String)input.get("filetype");
+        LOG.info("received: " + input.size() + " " + input.toString());
+        String filetype = (String)input.get("content-type");
+        LOG.info("fileType : "+filetype);
         String bucket_name = System.getenv(Config.BUCKET_NAME);
         if (bucket_name == null) {
             bucket_name = "";
@@ -42,8 +45,10 @@ public class generateSignUrlHandler implements RequestHandler<Map<String, Object
         AmazonS3 s3client = AmazonS3ClientBuilder.standard().withRegion(Regions.US_EAST_1).withCredentials(DefaultAWSCredentialsProviderChain.getInstance()).build();
         java.util.Date expiration = new java.util.Date();
         long msec = expiration.getTime();
-        msec += 1000 * 60 * 60; // Add 1 hour.
+        msec += 1000 * 60 * 60; // 1 hour.
         expiration.setTime(msec);
+
+        LOG.info("Exp : "+expiration.toString());
 
         LocalDate date = LocalDate.now();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -54,15 +59,20 @@ public class generateSignUrlHandler implements RequestHandler<Map<String, Object
         String keyName = parsedDate + File.separator + System.currentTimeMillis();
         GeneratePresignedUrlRequest generatePresignedUrlRequest = new GeneratePresignedUrlRequest(bucket_name, keyName);
         generatePresignedUrlRequest.setMethod(HttpMethod.PUT);
-        generatePresignedUrlRequest.setContentType(filetype);
+        generatePresignedUrlRequest.setContentType("image/png");
         // setting http request header:
         // x-amx-canned-acl: 'public-read'
         generatePresignedUrlRequest.addRequestParameter(
                 Headers.S3_CANNED_ACL,
                 CannedAccessControlList.PublicRead.toString()
         );
+        //Access-Control-Allow-Origin
+//        generatePresignedUrlRequest.addRequestParameter(
+//                "Access-Control-Allow-Origin",
+//                "*"
+//        );
         generatePresignedUrlRequest.setExpiration(expiration);
-
+        s3client.putObject(bucket_name,keyName,"temp");
         URL signUrl = s3client.generatePresignedUrl(generatePresignedUrlRequest);
         String signUrlString = signUrl.toString();
 
