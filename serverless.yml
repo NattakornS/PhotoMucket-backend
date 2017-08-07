@@ -74,19 +74,21 @@ functions:
       - http:
           path: rekognition/upload
           method: post
+          cors: true
   search-userData:
     handler: com.serverless.rekognition.getUserDataHandler
     events:
       - http:
           path: rekognition/search
           method: get
-
+          cors: true
   generate-signurl:
     handler: com.serverless.rekognition.generateSignUrlHandler
     events:
       - http:
           path: rekognition/signUrl
           method: get
+          cors: true
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
 #    Check the event documentation for details
