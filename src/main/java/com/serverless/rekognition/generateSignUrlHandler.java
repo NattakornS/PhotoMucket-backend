@@ -8,11 +8,12 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.Headers;
-import com.amazonaws.services.s3.model.*;
+import com.amazonaws.services.s3.model.CannedAccessControlList;
+import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
+import com.serverless.rekognition.config.ApiParameter;
 import com.serverless.rekognition.config.Config;
 import org.apache.log4j.Logger;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
@@ -34,20 +35,18 @@ public class generateSignUrlHandler implements RequestHandler<Map<String, Object
     public ApiGatewayResponse handleRequest(Map<String, Object> input, Context context) {
         LOG.info("received: " + input.size() + " " + input.toString());
         Response response = null;
-        String fileType = "image/png";
-        String fileName = "filename";
         Object queryStringParameters = input.get("queryStringParameters");
-        LOG.info("qeuryString : " + queryStringParameters.toString());
+        LOG.info("queryString : " + queryStringParameters.toString());
 
-        if (queryStringParameters != null) {
-            Map<String, String> params = (Map<String, String>) queryStringParameters;
-            fileName = params.get("filename");
-            fileType = params.get("filetype");
-            LOG.info("file name : " + fileName + "\n" + "file type : " + fileType);
-        }else{
-            headers.put("error","missing file name and type");
+//            Map<String, String> params = (Map<String, String>) queryStringParameters;
+        String fileName = (String) input.get(ApiParameter.GetSignURL.FILE_NAME);
+        String fileType = (String) input.get(ApiParameter.GetSignURL.FILE_TYPE);
+        LOG.info("file name : " + fileName + "\n" + "file type : " + fileType);
+        if (fileName == "" || fileType == "") {
+            headers.put("Bad Request","\tThis response means that server could not understand the request due to invalid syntax.");
+            headers.put("error", "missing file name or type");
             return ApiGatewayResponse.builder()
-                    .setStatusCode(200)
+                    .setStatusCode(400)
                     .setObjectBody(response)
                     .setHeaders(headers)
                     .build();
@@ -81,12 +80,11 @@ public class generateSignUrlHandler implements RequestHandler<Map<String, Object
                LOG.error(e.getMessage());
             }
         }*/
-        String bucket_name = System.getenv(Config.BUCKET_NAME);
-        if (bucket_name == null) {
-            bucket_name = "";
+        String bucketName = System.getenv(Config.BUCKET_NAME);
+        String searcherFolderName = System.getenv(Config.SEARCHER_FOLDER_NAME);
+        if (bucketName == null) {
+            bucketName = "";
         }
-        LOG.info("Bucket Name : " + bucket_name);
-        prefixUrl = prefixUrl.concat(bucket_name + "/");
 
 //        Response responseBody = new Response("Go Serverless v1.x! Your function executed successfully!", input);
 //		AmazonS3 s3Client = new AmazonS3ClientBuilder.with(new ProfileCredentialsProvider());
@@ -111,28 +109,28 @@ public class generateSignUrlHandler implements RequestHandler<Map<String, Object
             String text = date.format(formatter);
             LocalDate parsedDate = LocalDate.parse(text, formatter);
             String s3FileName = System.currentTimeMillis() + fileName;
-            String keyName = parsedDate + "/" + s3FileName;
+            String keyName = searcherFolderName + "/" + parsedDate + "/" + s3FileName;
 
 
             // create temp file and add acl
 
-//            Bucket bucket = s3client.createBucket(bucket_name);
+//            Bucket bucket = s3client.createBucket(bucketName);
 /*            File file = new File(s3FileName);
             AccessControlList acl = new AccessControlList();
             acl.grantPermission(GroupGrantee.AllUsers, Permission.FullControl);
-            s3client.putObject(new PutObjectRequest(bucket_name, keyName, file).withAccessControlList(acl));
-            s3client.setObjectAcl(bucket_name, keyName, CannedAccessControlList.PublicRead);*/
+            s3client.putObject(new PutObjectRequest(bucketName, keyName, file).withAccessControlList(acl));
+            s3client.setObjectAcl(bucketName, keyName, CannedAccessControlList.PublicRead);*/
 
-            GeneratePresignedUrlRequest generatePresignedUrlRequest = new GeneratePresignedUrlRequest(bucket_name, keyName);
+            GeneratePresignedUrlRequest generatePresignedUrlRequest = new GeneratePresignedUrlRequest(bucketName, keyName);
             generatePresignedUrlRequest.setMethod(HttpMethod.PUT);
             generatePresignedUrlRequest.setContentType(fileType);
             generatePresignedUrlRequest.setExpiration(expiration);
             // setting http request header:
             // x-amx-canned-acl: 'public-read'
-//            generatePresignedUrlRequest.addRequestParameter(
-//                    Headers.S3_CANNED_ACL,
-//                    CannedAccessControlList.PublicRead.toString()
-//            );
+            generatePresignedUrlRequest.addRequestParameter(
+                    Headers.S3_CANNED_ACL,
+                    CannedAccessControlList.PublicRead.toString()
+            );
             //Access-Control-Allow-Origin
 //            generatePresignedUrlRequest.addRequestParameter(
 //                    "Access-Control-Allow-Origin",
@@ -142,14 +140,17 @@ public class generateSignUrlHandler implements RequestHandler<Map<String, Object
 
             URL signUrl = s3client.generatePresignedUrl(generatePresignedUrlRequest);
 //            CannedAccessControlList acl = new CannedAccessControlList(CannedAccessControlList.PublicRead.toString());
-//            s3client.setObjectAcl(bucket_name,keyName,acl);
+//            s3client.setObjectAcl(bucketName,keyName,acl);
             String signUrlString = signUrl.toURI().toString();
-
+            String imageUrl = prefixUrl + "/" + bucketName + "/" + keyName;
             LOG.info("signedUrl : " + signUrlString);
+            LOG.info("imageUrl : " + imageUrl);
 //            UploadObject(signUrl);
             Map<String, Object> output = new HashMap<String, Object>();
-            output.put("signUrl", signUrlString);
-            output.put("url", prefixUrl + keyName);
+            output.put(ApiParameter.ResponseSignURL.SIGN_URL, signUrlString);
+            output.put(ApiParameter.ResponseSignURL.IMAGE_URL, imageUrl);
+            output.put(ApiParameter.ResponseSignURL.KEY_NAME, keyName);
+            output.put(ApiParameter.ResponseSignURL.BUCKET_NAME, bucketName);
             response = new Response("generateURL", output);
 
 //        String body = "signUrl : "+signUrlString+","+"url : " +prefixUrl+keyName;
