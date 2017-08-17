@@ -31,12 +31,11 @@ public class getUserDataHandler implements RequestHandler<Map<String, Object>, A
     private static final Logger LOG = Logger.getLogger(getUserDataHandler.class);
     private Float threshold = 70F;
     private int maxFaces = 2;
-
     @Override
     public ApiGatewayResponse handleRequest(Map<String, Object> input, Context context) {
         LOG.info("received: " + input);
         Response responseBody = new Response("Go Serverless v1.x! Your function executed successfully!", input);
-
+        //Test
         AmazonRekognition amazonRekognition = AmazonRekognitionClientBuilder.standard().build();
         String bucket = (String)input.get("bucket");
         String key = (String)input.get("key");
