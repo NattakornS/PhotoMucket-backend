@@ -44,6 +44,13 @@ public class generateSignUrlHandler implements RequestHandler<Map<String, Object
             fileName = params.get("filename");
             fileType = params.get("filetype");
             LOG.info("file name : " + fileName + "\n" + "file type : " + fileType);
+        }else{
+            headers.put("error","missing file name and type");
+            return ApiGatewayResponse.builder()
+                    .setStatusCode(200)
+                    .setObjectBody(response)
+                    .setHeaders(headers)
+                    .build();
         }
 
         /*if (params!=null){

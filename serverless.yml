@@ -22,6 +22,8 @@ provider:
   environment:
     USER_DYNAMODB_TABLE: ${self:service}-user-${opt:stage, self:provider.stage}
     BUCKET_NAME: ${self:service}-${self:provider.region}-${opt:stage, self:provider.stage}
+    REGISTER_FOLDER_NAME: register
+    SEARCHER_FOLDER_NAME: searcher
 # you can overwrite defaults here
   stage: dev
   region: us-east-1
@@ -105,9 +107,10 @@ functions:
     handler: com.serverless.rekognition.postUserDataHandler
     events:
       - http:
-          path: rekognition/upload
+          path: rekognition/register
           method: post
           cors: true
+          private: true
   search-userData:
     handler: com.serverless.rekognition.getUserDataHandler
     events:
@@ -115,6 +118,7 @@ functions:
           path: rekognition/search
           method: get
           cors: true
+          private: true
   generate-signurl:
     handler: com.serverless.rekognition.generateSignUrlHandler
     events:
