@@ -26,7 +26,7 @@ import java.util.Map;
 public class generateSignUrlHandler implements RequestHandler<Map<String, Object>, ApiGatewayResponse> {
 
     private static final Logger LOG = Logger.getLogger(generateSignUrlHandler.class);
-    private String prefixUrl = "https://s3.amazonaws.com/";
+    private String prefixUrl = "https://s3.amazonaws.com";
     private Map<String, String> headers = null;
     private String folderName = "";
 
