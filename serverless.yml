@@ -89,7 +89,7 @@ provider:
     -  Effect: "Allow"
        Action:
          - "dynamodb:*"
-       Resource: arn:aws:dynamodb:::${self:provider.environment.USER_DYNAMODB_TABLE}
+       Resource: arn:aws:dynamodb:us-east-1:939083131353:table/rekognition-demo-user-dev
     -  Effect: "Allow"
        Action:
          - "rekognition:*"
@@ -131,18 +131,19 @@ functions:
           request:
             template:
               application/json: >
-                {
-                  "firstName":"$input.params('firstName')",
-                  "sureName": "$input.params('sureName')",
-                  "nickName": "$input.params('nickName')",
-                  "email": "$input.params('email')",
-                  "birthDay": "$input.params('birthDay')",
-                  "phone": "$input.params('phone')",
-                  "description":"$input.params('description')",
-                  "imageUrl":"$input.params('imageUrl')",
-                  "bucket":"$input.params('bucket')",
-                  "key":"$input.params('key')",
-                }
+                     $input.body
+#                {
+#                  "firstName":"$input.params('firstName')",
+#                  "sureName": "$input.params('sureName')",
+#                  "nickName": "$input.params('nickName')",
+#                  "email": "$input.params('email')",
+#                  "birthDay": "$input.params('birthDay')",
+#                  "phone": "$input.params('phone')",
+#                  "description":"$input.params('description')",
+#                  "imageUrl":"$input.params('imageUrl')",
+#                  "bucket":"$input.params('bucket')",
+#                  "key":"$input.params('key')",
+#                }
   search-userData:
     handler: com.serverless.rekognition.getUserDataHandler
     events:
