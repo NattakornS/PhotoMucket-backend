@@ -12,6 +12,7 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.rekognition.AmazonRekognition;
 import com.amazonaws.services.rekognition.AmazonRekognitionClientBuilder;
 import com.amazonaws.services.rekognition.model.*;
+import com.serverless.rekognition.config.ApiParameter;
 import com.serverless.rekognition.config.Config;
 import com.serverless.rekognition.config.TableHeader;
 import org.apache.log4j.Logger;
@@ -28,7 +29,8 @@ public class postUserDataHandler implements RequestHandler<Map<String, Object>, 
     @Override
     public ApiGatewayResponse handleRequest(Map<String, Object> input, Context context) {
         LOG.info("received: " + input);
-        Response responseBody = new Response("Go Serverless v1.x! Your function executed successfully!", input);
+        String collectionId = System.getenv(Config.REKOGNITION_COLLECTION_NAME);
+//        Response responseBody = new Response("Go Serverless v1.x! Your function executed successfully!", input);
 
 //		AWSCredentials credentials;
 //		try {
@@ -40,6 +42,17 @@ public class postUserDataHandler implements RequestHandler<Map<String, Object>, 
 //							"location (/Users/userid/.aws/credentials), and is in valid format.",
 //					e);
 //		}
+
+        String key = input.get(ApiParameter.PostUserData.KEY).toString();
+        String birthday = input.get(ApiParameter.PostUserData.BIRTHDAY).toString();
+        String bucket = input.get(ApiParameter.PostUserData.BUCKET).toString();
+        String description = input.get(ApiParameter.PostUserData.DESCRIPTION).toString();
+        String email = input.get(ApiParameter.PostUserData.EMAIL).toString();
+        String firstame = input.get(ApiParameter.PostUserData.FIRSTNAME).toString();
+        String surename = input.get(ApiParameter.PostUserData.SURENAME).toString();
+        String nickname = input.get(ApiParameter.PostUserData.NICKNAME).toString();
+        String phone = input.get(ApiParameter.PostUserData.PHONE).toString();
+        String imageUrl = input.get(ApiParameter.PostUserData.IMAGEURL).toString();
 
 
         AmazonRekognition amazonRekognition = AmazonRekognitionClientBuilder
@@ -55,56 +68,62 @@ public class postUserDataHandler implements RequestHandler<Map<String, Object>, 
 
 
         if (!isCollectionExist(amazonRekognition)) {
-            CreateCollectionResult createCollectionResult = callCreateCollection(Config.collectionId, amazonRekognition);
+
+            CreateCollectionResult createCollectionResult = callCreateCollection(collectionId, amazonRekognition);
             LOG.info(createCollectionResult.toString());
         }
 
-        String keyName = (String) input.get("key");
+//        String keyName = (String) input.get("key");
 
-        String bucket_name = System.getenv(Config.BUCKET_NAME);
+//        String bucket_name = System.getenv(Config.BUCKET_NAME);
         String user_table_name = System.getenv(Config.USER_DYNAMODB_TABLE);
 
 
-        Image image = getImageUtil(bucket_name, keyName);
-        String externalImageId = "sourceImage.jpg";
-        IndexFacesResult indexFacesResult = callIndexFaces(keyName,
+        Image image = getImageUtil(bucket, key);
+        String externalImageId = key;
+        IndexFacesResult indexFacesResult = callIndexFaces(collectionId,
                 externalImageId, "ALL", image, amazonRekognition);
         System.out.println(externalImageId + " added");
         List<FaceRecord> faceRecords = indexFacesResult.getFaceRecords();
-        String faceDetectTxt = "";
-        for (FaceRecord faceRecord : faceRecords) {
-            faceDetectTxt += "Face detected: Faceid is " +
-                    faceRecord.getFace().getFaceId() + "/n";
 
-        }
-        System.out.println(faceDetectTxt);
-        input.put("FaceDetect", faceDetectTxt);
-        Response response = new Response(Config.ResponeseKey, input);
 
         DynamoDB dynamoDB = new DynamoDB(amazonDynamoDB);
 
         Table table = dynamoDB.getTable(user_table_name);
 
-        String sureName = "";
-        String name = "";
-        String nickName = "";
-        String email = "";
-        String faceId = "";
-        String imageId = "";
-        String imageUrl = "";
-        String phone = "";
-        Item item = new Item()
-                .withPrimaryKey(TableHeader.NAME, name)
-                .withString(TableHeader.SURE_NAME, sureName)
-                .withString(TableHeader.NICK_NAME, nickName)
-                .withString(TableHeader.EMAIL, email)
-                .withString(TableHeader.FACE_ID, faceId)
-                .withString(TableHeader.IMAGE_ID, imageId)
-                .withString(TableHeader.IMAGE_URL, imageUrl)
-                .withString(TableHeader.PHONE, phone);
+//        String sureName = "";
+//        String name = "";
+//        String nickName = "";
+//        String email = "";
+//        String faceId = "";
+//        String imageId = "";
+//        String imageUrl = "";
+//        String phone = "";
+        String faceDetectTxt = "";
+        for (FaceRecord faceRecord : faceRecords) {
+            String faceId = faceRecord.getFace().getFaceId();
+            String imageId = faceRecord.getFace().getImageId();
+            faceDetectTxt += "Face detected: Faceid is " +
+                    faceId + "/n";
 
-        table.putItem(item);
 
+            Item item = new Item()
+                    .withPrimaryKey(TableHeader.NAME, firstame)
+                    .withString(TableHeader.SURE_NAME, surename)
+                    .withString(TableHeader.NICK_NAME, nickname)
+                    .withString(TableHeader.PHONE, birthday)
+                    .withString(TableHeader.PHONE, description)
+                    .withString(TableHeader.EMAIL, email)
+                    .withString(TableHeader.FACE_ID, faceId)
+                    .withString(TableHeader.IMAGE_ID, imageId)
+                    .withString(TableHeader.IMAGE_URL, imageUrl)
+                    .withString(TableHeader.PHONE, phone);
+
+            table.putItem(item);
+        }
+        System.out.println(faceDetectTxt);
+        input.put("FaceDetect", faceDetectTxt);
+        Response response = new Response(Config.ResponeseKey, input);
         return ApiGatewayResponse.builder()
                 .setStatusCode(200)
                 .setObjectBody(response)

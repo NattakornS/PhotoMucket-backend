@@ -7,8 +7,6 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.Headers;
-import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import com.serverless.rekognition.config.ApiParameter;
 import com.serverless.rekognition.config.Config;
@@ -30,20 +28,37 @@ public class generateSignUrlHandler implements RequestHandler<Map<String, Object
     private static final Logger LOG = Logger.getLogger(generateSignUrlHandler.class);
     private String prefixUrl = "https://s3.amazonaws.com/";
     private Map<String, String> headers = null;
+    private String folderName = "";
 
     @Override
     public ApiGatewayResponse handleRequest(Map<String, Object> input, Context context) {
         LOG.info("received: " + input.size() + " " + input.toString());
         Response response = null;
-        Object queryStringParameters = input.get("queryStringParameters");
-        LOG.info("queryString : " + queryStringParameters.toString());
 
 //            Map<String, String> params = (Map<String, String>) queryStringParameters;
         String fileName = (String) input.get(ApiParameter.GetSignURL.FILE_NAME);
         String fileType = (String) input.get(ApiParameter.GetSignURL.FILE_TYPE);
+        String pathType = input.get(ApiParameter.GetSignURL.PATH_TYPE) != null ? (String) input.get(ApiParameter.GetSignURL.PATH_TYPE) : "";
+        LOG.info("pathType : "+pathType);
+        if (pathType.equals(ApiParameter.RequestType.REGISTER.type())) {
+            folderName = System.getenv(Config.REGISTER_FOLDER_NAME);
+        } else if(pathType.equals(ApiParameter.RequestType.SEARCH.type())) {
+            folderName = System.getenv(Config.SEARCHER_FOLDER_NAME);
+        }else {
+            headers = new HashMap<>();
+            headers.put("Bad Request", "\tThis response means that server could not understand the request due to invalid syntax.");
+            headers.put("error", "missing path type");
+            return ApiGatewayResponse.builder()
+                    .setStatusCode(400)
+                    .setObjectBody(response)
+                    .setHeaders(headers)
+                    .build();
+        }
+
         LOG.info("file name : " + fileName + "\n" + "file type : " + fileType);
         if (fileName == "" || fileType == "") {
-            headers.put("Bad Request","\tThis response means that server could not understand the request due to invalid syntax.");
+            headers = new HashMap<>();
+            headers.put("Bad Request", "\tThis response means that server could not understand the request due to invalid syntax.");
             headers.put("error", "missing file name or type");
             return ApiGatewayResponse.builder()
                     .setStatusCode(400)
@@ -81,7 +96,17 @@ public class generateSignUrlHandler implements RequestHandler<Map<String, Object
             }
         }*/
         String bucketName = System.getenv(Config.BUCKET_NAME);
-        String searcherFolderName = System.getenv(Config.SEARCHER_FOLDER_NAME);
+
+//        switch (pathType) {
+//            case ApiParameter.RequestType.REGISTER.type() :
+//                break;
+//            case ApiParameter.RequestType.SEARCH.type() :
+//                break;
+//            default :
+//                break;
+//        }
+
+
         if (bucketName == null) {
             bucketName = "";
         }
@@ -109,7 +134,7 @@ public class generateSignUrlHandler implements RequestHandler<Map<String, Object
             String text = date.format(formatter);
             LocalDate parsedDate = LocalDate.parse(text, formatter);
             String s3FileName = System.currentTimeMillis() + fileName;
-            String keyName = searcherFolderName + "/" + parsedDate + "/" + s3FileName;
+            String keyName = folderName + "/" + parsedDate + "/" + s3FileName;
 
 
             // create temp file and add acl
@@ -127,10 +152,10 @@ public class generateSignUrlHandler implements RequestHandler<Map<String, Object
             generatePresignedUrlRequest.setExpiration(expiration);
             // setting http request header:
             // x-amx-canned-acl: 'public-read'
-            generatePresignedUrlRequest.addRequestParameter(
-                    Headers.S3_CANNED_ACL,
-                    CannedAccessControlList.PublicRead.toString()
-            );
+//            generatePresignedUrlRequest.addRequestParameter(
+//                    Headers.S3_CANNED_ACL,
+//                    CannedAccessControlList.PublicRead.toString()
+//            );
             //Access-Control-Allow-Origin
 //            generatePresignedUrlRequest.addRequestParameter(
 //                    "Access-Control-Allow-Origin",
@@ -146,7 +171,7 @@ public class generateSignUrlHandler implements RequestHandler<Map<String, Object
             LOG.info("signedUrl : " + signUrlString);
             LOG.info("imageUrl : " + imageUrl);
 //            UploadObject(signUrl);
-            Map<String, Object> output = new HashMap<String, Object>();
+            Map<String, Object> output = new HashMap<>();
             output.put(ApiParameter.ResponseSignURL.SIGN_URL, signUrlString);
             output.put(ApiParameter.ResponseSignURL.IMAGE_URL, imageUrl);
             output.put(ApiParameter.ResponseSignURL.KEY_NAME, keyName);
@@ -163,13 +188,14 @@ public class generateSignUrlHandler implements RequestHandler<Map<String, Object
                     "which means your request made it " +
                     "to Amazon S3, but was rejected with an error response " +
                     "for some reason.");
+
             LOG.error("ErrorMessage: " + exception.getMessage());
             LOG.error("HTTPCode: " + exception.getStatusCode());
             LOG.error("AWSErrorCode:" + exception.getErrorCode());
             LOG.error("ErrorType:    " + exception.getErrorType());
             LOG.error("RequestID:    " + exception.getRequestId());
 
-            Map<String, Object> output = new HashMap<String, Object>();
+            Map<String, Object> output = new HashMap<>();
             output.put("Error Message", exception.getMessage());
             output.put("HTTP  Code", exception.getStatusCode());
             output.put("AWS Error Code:", exception.getMessage());
