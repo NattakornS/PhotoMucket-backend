@@ -153,6 +153,15 @@ functions:
           method: get
           cors: true
           private: true
+          integration: lambda
+          request:
+            template:
+              application/json: >
+                {
+                  "imageUrl":"$input.params('imageUrl')",
+                  "bucket":"$input.params('bucket')",
+                  "key":"$input.params('key')"
+                }
   generate-signurl:
     handler: com.serverless.rekognition.generateSignUrlHandler
     events:
@@ -165,11 +174,11 @@ functions:
           request:
             template:
               application/json: >
-                {
-                  "fileType" : "$input.params('fileType')",
-                  "fileName" : "$input.params('fileName')",
-                  "pathType" : "$input.params('type')"
-                }
+              {
+                "imageUrl":"$input.params('imageUrl')",
+                "bucket":"$input.params('bucket')",
+                "key":"$input.params('key')"
+              }
             parameters:
               paths:
                 type: true

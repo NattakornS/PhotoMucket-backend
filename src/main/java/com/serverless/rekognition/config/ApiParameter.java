@@ -46,4 +46,10 @@ public class ApiParameter {
         String BUCKET = "bucket";
         String KEY = "key";
     }
+
+    public interface getUserDataHandler{
+        String IMAGEURL ="imageUrl";
+        String BUCKET = "bucket";
+        String KEY = "key";
+    }
 }
