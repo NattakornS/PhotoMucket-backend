@@ -185,7 +185,7 @@ public class postUserDataHandler implements RequestHandler<Map<String, Object>, 
 //            }
         }
         System.out.println(faceDetectTxt);
-        input.put("FaceDetect", faceDetectTxt);
+        input.put("FaceDetect", faceRecords.size());
         Response response = new Response(Config.ResponeseKey, input);
         return ApiGatewayResponse.builder()
                 .setStatusCode(200)
@@ -245,7 +245,7 @@ public class postUserDataHandler implements RequestHandler<Map<String, Object>, 
         IndexFacesRequest indexFacesRequest = new IndexFacesRequest()
                 .withImage(image)
                 .withCollectionId(collectionId)
-//                .withExternalImageId(externalImageId)
+                .withExternalImageId(externalImageId)
                 .withDetectionAttributes(attributes);
         return amazonRekognition.indexFaces(indexFacesRequest);
 

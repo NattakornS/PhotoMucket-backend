@@ -7,6 +7,8 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.Headers;
+import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;
 import com.serverless.rekognition.config.ApiParameter;
 import com.serverless.rekognition.config.Config;
@@ -142,10 +144,10 @@ public class generateSignUrlHandler implements RequestHandler<Map<String, Object
             generatePresignedUrlRequest.setExpiration(expiration);
             // setting http request header:
             // x-amx-canned-acl: 'public-read'
-//            generatePresignedUrlRequest.addRequestParameter(
-//                    Headers.S3_CANNED_ACL,
-//                    CannedAccessControlList.PublicRead.toString()
-//            );
+            generatePresignedUrlRequest.addRequestParameter(
+                    Headers.S3_CANNED_ACL,
+                    CannedAccessControlList.PublicRead.toString()
+            );
             //Access-Control-Allow-Origin
 //            generatePresignedUrlRequest.addRequestParameter(
 //                    "Access-Control-Allow-Origin",

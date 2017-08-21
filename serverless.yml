@@ -174,11 +174,11 @@ functions:
           request:
             template:
               application/json: >
-              {
-                "imageUrl":"$input.params('imageUrl')",
-                "bucket":"$input.params('bucket')",
-                "key":"$input.params('key')"
-              }
+                {
+                  "fileType" : "$input.params('fileType')",
+                  "fileName" : "$input.params('fileName')",
+                  "pathType" : "$input.params('type')"
+                }
             parameters:
               paths:
                 type: true

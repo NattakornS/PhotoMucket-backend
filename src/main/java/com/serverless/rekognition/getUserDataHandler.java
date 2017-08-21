@@ -70,7 +70,7 @@ public class getUserDataHandler implements RequestHandler<Map<String, Object>, A
                     Item item = iter.next();
 
                     LOG.info("item:"+item.toString());
-                    LOG.info("get in item : faceid: "+item.getJSON("faceid").toString()+"imageurl:"+item.getJSON("imageurl").toString());
+                    LOG.info("get in item : faceid: "+item.getJSON("faceid")+"imageurl:"+item.getJSON("imageurl"));
                     face_detail_json.add(item.toJSON());
                 }
 
@@ -88,7 +88,7 @@ public class getUserDataHandler implements RequestHandler<Map<String, Object>, A
 
     @Override
     public ApiGatewayResponse handleRequest(Map<String, Object> input, Context context) {
-
+        String collectionId = System.getenv(Config.REKOGNITION_COLLECTION_NAME);
 //        input parameter
 //        {
 //            "imageUrl":"http://s3.amazonaws.com/Rekognitiondemo/15082017/imagename.jpg",
@@ -124,7 +124,7 @@ public class getUserDataHandler implements RequestHandler<Map<String, Object>, A
             LOG.info("Image source :");
             Image source = getImageUtil(bucket, key);
             LOG.info("Before searchFacesByImageResult :");
-            SearchFacesByImageResult searchFacesByImageResult = callSearchFacesByImage(Config.collectionId, source, threshold, maxFaces, amazonRekognition);
+            SearchFacesByImageResult searchFacesByImageResult = callSearchFacesByImage(collectionId, source, threshold, maxFaces, amazonRekognition);
             if(searchFacesByImageResult.getFaceMatches().size() != 0)
             {
                 for(int i=0 ;i<searchFacesByImageResult.getFaceMatches().size();i++)
