@@ -97,16 +97,6 @@ public class generateSignUrlHandler implements RequestHandler<Map<String, Object
         }*/
         String bucketName = System.getenv(Config.BUCKET_NAME);
 
-//        switch (pathType) {
-//            case ApiParameter.RequestType.REGISTER.type() :
-//                break;
-//            case ApiParameter.RequestType.SEARCH.type() :
-//                break;
-//            default :
-//                break;
-//        }
-
-
         if (bucketName == null) {
             bucketName = "";
         }
@@ -134,7 +124,7 @@ public class generateSignUrlHandler implements RequestHandler<Map<String, Object
             String text = date.format(formatter);
             LocalDate parsedDate = LocalDate.parse(text, formatter);
             String s3FileName = System.currentTimeMillis() + fileName;
-            String keyName = folderName + "/" + parsedDate + "/" + s3FileName;
+            String keyName = folderName + "/" + s3FileName;
 
 
             // create temp file and add acl
@@ -179,8 +169,8 @@ public class generateSignUrlHandler implements RequestHandler<Map<String, Object
             response = new Response("generateURL", output);
 
 //        String body = "signUrl : "+signUrlString+","+"url : " +prefixUrl+keyName;
-            headers = new HashMap<>();//("X-Powered-By", "AWS Lambda & serverless");
-            headers.put("X-Powered-By", "AWS Lambda & serverless");
+            headers = new HashMap<>();//("Rekognition", "Rekognition - signUrl");
+            headers.put("Rekognition", "Rekognition - signUrl");
             headers.put("Access-Control-Allow-Origin", "*");
 
         } catch (AmazonServiceException exception) {
@@ -201,7 +191,7 @@ public class generateSignUrlHandler implements RequestHandler<Map<String, Object
             output.put("AWS Error Code:", exception.getMessage());
             output.put("Error Type", exception.getStatusCode());
             output.put("Request ID", exception.getMessage());
-            headers = Collections.singletonMap("X-Powered-By", "AWS Lambda & serverless");
+            headers = Collections.singletonMap("Rekognition", "Rekognition - signUrl");
             response = new Response("generateURL", output);
 
         } catch (AmazonClientException ace) {
@@ -213,7 +203,7 @@ public class generateSignUrlHandler implements RequestHandler<Map<String, Object
             LOG.error("Error Message: " + ace.getMessage());
             Map<String, Object> output = new HashMap<String, Object>();
             output.put("ErrorMessage", ace.getMessage());
-            headers = Collections.singletonMap("X-Powered-By", "AWS Lambda & serverless");
+            headers = Collections.singletonMap("Rekognition", "Rekognition - signUrl");
             response = new Response("generateURL", output);
         } catch (URISyntaxException e) {
             LOG.error("Error Message: " + e.getMessage());

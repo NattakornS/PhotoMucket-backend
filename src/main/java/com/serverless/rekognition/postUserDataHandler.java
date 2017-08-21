@@ -5,11 +5,9 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.document.*;
-import com.amazonaws.services.dynamodbv2.document.internal.IteratorSupport;
 import com.amazonaws.services.dynamodbv2.document.spec.ScanSpec;
 import com.amazonaws.services.dynamodbv2.document.utils.NameMap;
 import com.amazonaws.services.dynamodbv2.document.utils.ValueMap;
-import com.amazonaws.services.dynamodbv2.model.ScanResult;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.rekognition.AmazonRekognition;
@@ -61,17 +59,18 @@ public class postUserDataHandler implements RequestHandler<Map<String, Object>, 
 //        HashMap<String,String> bodyMap = (HashMap<String,String>) body;
 
         String key = input.get(ApiParameter.PostUserData.KEY) != null ? input.get(ApiParameter.PostUserData.KEY).toString() : "";
+        String fileName = input.get(ApiParameter.PostUserData.FILE_NAME) != null ? input.get(ApiParameter.PostUserData.FILE_NAME).toString() : "";
         String birthday = input.get(ApiParameter.PostUserData.BIRTHDAY) != null ? input.get(ApiParameter.PostUserData.BIRTHDAY).toString() : "";
         String bucket = input.get(ApiParameter.PostUserData.BUCKET) != null ? input.get(ApiParameter.PostUserData.BUCKET).toString() : "";
         String description = input.get(ApiParameter.PostUserData.DESCRIPTION) != null ? input.get(ApiParameter.PostUserData.DESCRIPTION).toString() : "";
         String email = input.get(ApiParameter.PostUserData.EMAIL) != null ? input.get(ApiParameter.PostUserData.EMAIL).toString() : "";
-        String firstame = input.get(ApiParameter.PostUserData.FIRSTNAME) != null ? input.get(ApiParameter.PostUserData.FIRSTNAME).toString() : "";
+        String firstname = input.get(ApiParameter.PostUserData.FIRSTNAME) != null ? input.get(ApiParameter.PostUserData.FIRSTNAME).toString() : "";
         String surename = input.get(ApiParameter.PostUserData.SURENAME) != null ? input.get(ApiParameter.PostUserData.SURENAME).toString() : "";
         String nickname = input.get(ApiParameter.PostUserData.NICKNAME) != null ? input.get(ApiParameter.PostUserData.NICKNAME).toString() : "";
         String phone = input.get(ApiParameter.PostUserData.PHONE) != null ? input.get(ApiParameter.PostUserData.PHONE).toString() : "";
         String imageUrl = input.get(ApiParameter.PostUserData.IMAGEURL) != null ? input.get(ApiParameter.PostUserData.IMAGEURL).toString() : "";
 
-        if (key == "" || bucket == "" || email == "" || firstame == "") {
+        if (key == "" || bucket == "" || email == "" || firstname == "") {
             HashMap<String, Object> output = new HashMap<>();
             output.put("error", "invalid body");
             Response response = new Response(Config.ResponeseKey, output);
@@ -104,13 +103,12 @@ public class postUserDataHandler implements RequestHandler<Map<String, Object>, 
 
 //        String bucket_name = System.getenv(Config.BUCKET_NAME);
         String user_table_name = System.getenv(Config.USER_DYNAMODB_TABLE);
-
+        String rek_table_name = System.getenv(Config.REK_DYNAMODB_TABLE);
         LOG.info("Bucket Name : " + bucket + ", Key : " + key);
         Image image = getImageUtil(bucket, key);
-        String externalImageId = key;
         IndexFacesResult indexFacesResult = callIndexFaces(collectionId,
-                externalImageId, "ALL", image, amazonRekognition);
-        System.out.println(externalImageId + " added");
+                fileName, "ALL", image, amazonRekognition);
+        System.out.println(fileName + " added");
         List<FaceRecord> faceRecords = indexFacesResult.getFaceRecords();
 
 
@@ -128,22 +126,25 @@ public class postUserDataHandler implements RequestHandler<Map<String, Object>, 
 
         DynamoDB dynamoDB = new DynamoDB(amazonDynamoDB);
 
-        Table table = dynamoDB.getTable(user_table_name);
+        Table userTable = dynamoDB.getTable(user_table_name);
+        Table rekTable = dynamoDB.getTable(rek_table_name);
 
-//        String sureName = "";
-//        String name = "";
-//        String nickName = "";
-//        String email = "";
-//        String faceId = "";
-//        String imageId = "";
-//        String imageUrl = "";
-//        String phone = "";
+        Item userItem = new Item()
+                .withPrimaryKey(TableHeader.EMAIL, email)
+                .withString(TableHeader.NAME, firstname)
+                .withString(TableHeader.SURE_NAME, surename)
+                .withString(TableHeader.NICK_NAME, nickname)
+                .withString(TableHeader.PHONE, birthday)
+                .withString(TableHeader.DESC, description)
+                .withString(TableHeader.IMAGE_URL, imageUrl)
+                .withString(TableHeader.PHONE, phone);
+        userTable.putItem(userItem);
 
 
         String faceDetectTxt = "";
 
         for (FaceRecord faceRecord : faceRecords) {
-            int itemAcumulate=0;
+            int itemAcumulate = 0;
             String faceId = faceRecord.getFace().getFaceId();
             String imageId = faceRecord.getFace().getImageId();
             faceDetectTxt += "Face detected: Faceid is " +
@@ -154,39 +155,31 @@ public class postUserDataHandler implements RequestHandler<Map<String, Object>, 
 
             ScanSpec scanSpec = new ScanSpec().withProjectionExpression("#faceid,email")
                     .withFilterExpression("#faceid = :inputfaceid").withNameMap(new NameMap().with("#faceid", "faceid"))
-                    .withValueMap(new ValueMap().withString(":inputfaceid",faceId));
+                    .withValueMap(new ValueMap().withString(":inputfaceid", faceId));
 
             try {
-                ItemCollection<ScanOutcome> items = table.scan(scanSpec);
+                ItemCollection<ScanOutcome> items = userTable.scan(scanSpec);
                 itemAcumulate = items.getAccumulatedItemCount();
                 Iterator<Item> iter = items.iterator();
 
                 while (iter.hasNext()) {
                     itemAcumulate++;
                     Item item = iter.next();
-                    LOG.info("face dup : " +item.toString());
+                    LOG.info("face dup : " + item.toString());
                 }
-            }
-            catch (Exception e) {
-                System.err.println("Unable to scan the table:");
+            } catch (Exception e) {
+                System.err.println("Unable to scan the userTable:");
                 System.err.println(e.getMessage());
             }
 
-            LOG.info("ItemAcumulate : "+ itemAcumulate);
+            LOG.info("ItemAcumulate : " + itemAcumulate);
 //            if (itemAcumulate <= 0) {
-                Item item = new Item()
-                        .withPrimaryKey(TableHeader.NAME, firstame)
-                        .withString(TableHeader.SURE_NAME, surename)
-                        .withString(TableHeader.NICK_NAME, nickname)
-                        .withString(TableHeader.PHONE, birthday)
-                        .withString(TableHeader.PHONE, description)
-                        .withString(TableHeader.EMAIL, email)
-                        .withString(TableHeader.FACE_ID, faceId)
-                        .withString(TableHeader.IMAGE_ID, imageId)
-                        .withString(TableHeader.IMAGE_URL, imageUrl)
-                        .withString(TableHeader.PHONE, phone);
-                table.putItem(item);
-                LOG.info("Add user data to table : " + item.toString());
+            Item rekItem = new Item()
+                    .withPrimaryKey(TableHeader.FACE_ID, faceId)
+                    .withString(TableHeader.EMAIL, email)
+                    .withString(TableHeader.IMAGE_ID, imageId);
+            rekTable.putItem(rekItem);
+            LOG.info("Add user data to userTable : " + rekItem.toString());
 //            }else{
 //                LOG.info("Duplicate Face");
 //            }
@@ -197,7 +190,7 @@ public class postUserDataHandler implements RequestHandler<Map<String, Object>, 
         return ApiGatewayResponse.builder()
                 .setStatusCode(200)
                 .setObjectBody(response)
-                .setHeaders(Collections.singletonMap("X-Powered-By", "AWS Lambda & serverless"))
+                .setHeaders(Collections.singletonMap("Rekognition", "Rekognition - user data post"))
                 .build();
     }
 

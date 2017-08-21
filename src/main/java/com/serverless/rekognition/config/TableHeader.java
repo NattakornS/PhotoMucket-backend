@@ -14,6 +14,8 @@ public class TableHeader {
 
     public static final String IMAGE_URL = "imageurl";
 
+    public static final String DESC = "description";
+
     public static final String FACE_ID = "faceid";
 
     public static final String IMAGE_ID = "imageid";

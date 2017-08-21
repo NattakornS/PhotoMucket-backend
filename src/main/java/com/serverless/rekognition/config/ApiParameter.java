@@ -28,6 +28,7 @@ public class ApiParameter {
     public interface ResponseSignURL {
         String SIGN_URL = "signUrl";
         String IMAGE_URL = "imageUrl";
+        String FILE_NAME = "fileName";
         String KEY_NAME = "key";
         String BUCKET_NAME = "bucket";
     }
@@ -41,6 +42,7 @@ public class ApiParameter {
         String PHONE = "phone";
         String DESCRIPTION = "description";
         String IMAGEURL = "imageUrl";
+        String FILE_NAME = "fileName";
         String BUCKET = "bucket";
         String KEY = "key";
     }

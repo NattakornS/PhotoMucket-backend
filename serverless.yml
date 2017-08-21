@@ -21,6 +21,7 @@ provider:
   runtime: java8
   environment:
     USER_DYNAMODB_TABLE: ${self:service}-user-${opt:stage, self:provider.stage}
+    REK_DYNAMODB_TABLE: ${self:service}-rek-${opt:stage, self:provider.stage}
     BUCKET_NAME: ${self:service}-${self:provider.region}-${opt:stage, self:provider.stage}
     REGISTER_FOLDER_NAME: register
     SEARCHER_FOLDER_NAME: searcher
@@ -233,17 +234,25 @@ resources:
         AttributeDefinitions:
           - AttributeName: email
             AttributeType: S
-          - AttributeName: name
-            AttributeType: S
         KeySchema:
           - AttributeName: email
             KeyType: HASH
-          - AttributeName: name
-            KeyType: RANGE
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
-
+    rekognitionTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.REK_DYNAMODB_TABLE}
+        AttributeDefinitions:
+          - AttributeName: faceid
+            AttributeType: S
+        KeySchema:
+          - AttributeName: faceid
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
   # The "Outputs" that your AWS CloudFormation Stack should produce.  This allows references between services.
 #  Outputs:
 #    UsersTableArn:
