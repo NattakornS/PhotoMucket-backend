@@ -86,11 +86,15 @@ provider:
     -  Effect: "Allow"
        Action:
          - "s3:*"
-       Resource: arn:aws:s3:::${self:provider.environment.BUCKET_NAME}
+       Resource: "arn:aws:s3:::${self:provider.environment.BUCKET_NAME}/*"
     -  Effect: "Allow"
        Action:
          - "dynamodb:*"
-       Resource: arn:aws:dynamodb:us-east-1:939083131353:table/rekognition-demo-user-dev
+       Resource: "arn:aws:dynamodb:us-east-1:*:table/rekognition-demo-rek-dev"
+    -  Effect: "Allow"
+       Action:
+         - "dynamodb:*"
+       Resource: "arn:aws:dynamodb:us-east-1:*:table/rekognition-demo-user-dev"
     -  Effect: "Allow"
        Action:
          - "rekognition:*"
@@ -182,6 +186,22 @@ functions:
             parameters:
               paths:
                 type: true
+  face-analysis:
+    handler: com.serverless.rekognition.FaceAnalysis
+    events:
+      - http:
+          path: rekognition/faceanalysis
+          method: get
+          cors: true
+          private: true
+          integration: lambda
+          request:
+            template:
+              application/json: >
+                {
+                  "bucket":"$input.params('bucket')",
+                  "key":"$input.params('key')"
+                }
 #          request:
 #            parameters:
 #              paths:
