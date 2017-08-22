@@ -2,7 +2,7 @@ package com.serverless.rekognition.config;
 
 public class TableHeader {
 
-    public static final String NAME = "name";
+    public static final String NAME = "firstname";
 
     public static final String SURE_NAME = "surename";
 
