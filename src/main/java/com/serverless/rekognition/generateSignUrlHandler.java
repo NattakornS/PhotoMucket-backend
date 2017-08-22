@@ -69,34 +69,7 @@ public class generateSignUrlHandler implements RequestHandler<Map<String, Object
                     .build();
         }
 
-        /*if (params!=null){
-            try {
-                String filetype = "";
-                String filename = "";
-                JsonFactory factory = new JsonFactory();
-                JsonParser  parser  = factory.createParser(params.toString());
-                while(!parser.isClosed()){
-                    JsonToken jsonToken = parser.nextToken();
 
-                    if(JsonToken.FIELD_NAME.equals(jsonToken)){
-                        String fieldName = parser.getCurrentName();
-                        System.out.println(fieldName);
-
-                        jsonToken = parser.nextToken();
-
-                        if("filename".equals(fieldName)){
-                            filename = parser.getValueAsString();
-                        } else if ("filetype".equals(fieldName)){
-                            filetype = parser.getValueAsString();
-                        }
-                    }
-                }
-
-                LOG.info("file name : "+filename+"\n"+"file type : "+filetype);
-            } catch (IOException e) {
-               LOG.error(e.getMessage());
-            }
-        }*/
         String bucketName = System.getenv(Config.BUCKET_NAME);
 
         if (bucketName == null) {

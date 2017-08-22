@@ -20,5 +20,5 @@ public class TableHeader {
 
     public static final String IMAGE_ID = "imageid";
 
-
+    public static final String EXTERNAL_IMAGE_ID = "external_imageid";
 }
