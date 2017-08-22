@@ -8,6 +8,7 @@ import com.amazonaws.services.dynamodbv2.document.*;
 import com.amazonaws.services.dynamodbv2.document.spec.ScanSpec;
 import com.amazonaws.services.dynamodbv2.document.utils.NameMap;
 import com.amazonaws.services.dynamodbv2.document.utils.ValueMap;
+import com.amazonaws.services.dynamodbv2.xspec.L;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.rekognition.AmazonRekognition;
@@ -24,26 +25,29 @@ public class postUserDataHandler implements RequestHandler<Map<String, Object>, 
 
     private static final Logger LOG = Logger.getLogger(postUserDataHandler.class);
 
+    private Map<String, String> defaultHeader = Collections.singletonMap("Rekognition", "Rekognition - user data post");
+    private String key;
+    private String fileName;
+    private String birthday;
+    private String bucket;
+    private String description;
+    private String email;
+    private String firstname;
+    private String surename;
+    private String nickname;
+    private String phone;
+    private String imageUrl;
+
+
     @Override
     public ApiGatewayResponse handleRequest(Map<String, Object> input, Context context) {
+
+        String collection_Id = System.getenv(Config.REKOGNITION_COLLECTION_NAME);
+        String user_table_name = System.getenv(Config.USER_DYNAMODB_TABLE);
+        String rek_table_name = System.getenv(Config.REK_DYNAMODB_TABLE);
         LOG.info("received: " + input);
-        String collectionId = System.getenv(Config.REKOGNITION_COLLECTION_NAME);
-        LOG.info("CollectionID : " + collectionId);
-//        Response responseBody = new Response("Go Serverless v1.x! Your function executed successfully!", input);
 
-//		AWSCredentials credentials;
-//		try {
-//			credentials = new ProfileCredentialsProvider("default").getCredentials();
-//		} catch (Exception e) {
-//			throw new AmazonClientException(
-//					"Cannot load the credentials from the credential profiles file. " +
-//							"Please make sure that your credentials file is at the correct " +
-//							"location (/Users/userid/.aws/credentials), and is in valid format.",
-//					e);
-//		}
 
-//        Object body = input.get("body");
-//
         if (input == null) {
             HashMap<String, Object> output = new HashMap<>();
             output.put("error", "invalid body");
@@ -51,35 +55,25 @@ public class postUserDataHandler implements RequestHandler<Map<String, Object>, 
             return ApiGatewayResponse.builder()
                     .setStatusCode(400)
                     .setObjectBody(response)
-                    .setHeaders(Collections.singletonMap("Rekognition", "Rekognition - user data post"))
+                    .setHeaders(defaultHeader)
                     .build();
         }
-//
-//
-//        HashMap<String,String> bodyMap = (HashMap<String,String>) body;
 
-        String key = input.get(ApiParameter.PostUserData.KEY) != null ? input.get(ApiParameter.PostUserData.KEY).toString() : "";
-        String fileName = input.get(ApiParameter.PostUserData.FILE_NAME) != null ? input.get(ApiParameter.PostUserData.FILE_NAME).toString() : "";
-        String birthday = input.get(ApiParameter.PostUserData.BIRTHDAY) != null ? input.get(ApiParameter.PostUserData.BIRTHDAY).toString() : "";
-        String bucket = input.get(ApiParameter.PostUserData.BUCKET) != null ? input.get(ApiParameter.PostUserData.BUCKET).toString() : "";
-        String description = input.get(ApiParameter.PostUserData.DESCRIPTION) != null ? input.get(ApiParameter.PostUserData.DESCRIPTION).toString() : "";
-        String email = input.get(ApiParameter.PostUserData.EMAIL) != null ? input.get(ApiParameter.PostUserData.EMAIL).toString() : "";
-        String firstname = input.get(ApiParameter.PostUserData.FIRSTNAME) != null ? input.get(ApiParameter.PostUserData.FIRSTNAME).toString() : "";
-        String surename = input.get(ApiParameter.PostUserData.SURENAME) != null ? input.get(ApiParameter.PostUserData.SURENAME).toString() : "";
-        String nickname = input.get(ApiParameter.PostUserData.NICKNAME) != null ? input.get(ApiParameter.PostUserData.NICKNAME).toString() : "";
-        String phone = input.get(ApiParameter.PostUserData.PHONE) != null ? input.get(ApiParameter.PostUserData.PHONE).toString() : "";
-        String imageUrl = input.get(ApiParameter.PostUserData.IMAGEURL) != null ? input.get(ApiParameter.PostUserData.IMAGEURL).toString() : "";
+        boolean getInputBool = getInputData(input);
 
-        if (key == "" || bucket == "" || email == "" || firstname == "") {
+        if (getInputBool){
             HashMap<String, Object> output = new HashMap<>();
             output.put("error", "invalid body");
             Response response = new Response(Config.ResponeseKey, output);
             return ApiGatewayResponse.builder()
                     .setStatusCode(400)
                     .setObjectBody(response)
-                    .setHeaders(Collections.singletonMap("Rekognition", "Rekognition - user data post"))
+                    .setHeaders(defaultHeader)
                     .build();
         }
+
+
+        //Initial Services
         AmazonRekognition amazonRekognition = AmazonRekognitionClientBuilder
                 .standard()
                 .withRegion(Regions.US_EAST_1)
@@ -93,20 +87,18 @@ public class postUserDataHandler implements RequestHandler<Map<String, Object>, 
                 .build();
 
 
-        if (!isCollectionExist(collectionId, amazonRekognition)) {
+        if (!isCollectionExist(collection_Id, amazonRekognition)) {
 
-            CreateCollectionResult createCollectionResult = callCreateCollection(collectionId, amazonRekognition);
+            CreateCollectionResult createCollectionResult = callCreateCollection(collection_Id, amazonRekognition);
             LOG.info(createCollectionResult.toString());
         }
 
-//        String keyName = (String) input.get("key");
 
-//        String bucket_name = System.getenv(Config.BUCKET_NAME);
-        String user_table_name = System.getenv(Config.USER_DYNAMODB_TABLE);
-        String rek_table_name = System.getenv(Config.REK_DYNAMODB_TABLE);
+        //Indexface
+        LOG.info("IndexFace to Collection : "+collection_Id);
         LOG.info("Bucket Name : " + bucket + ", Key : " + key);
         Image image = getImageUtil(bucket, key);
-        IndexFacesResult indexFacesResult = callIndexFaces(collectionId,
+        IndexFacesResult indexFacesResult = callIndexFaces(collection_Id,
                 fileName, "ALL", image, amazonRekognition);
         System.out.println(fileName + " added");
         List<FaceRecord> faceRecords = indexFacesResult.getFaceRecords();
@@ -114,21 +106,24 @@ public class postUserDataHandler implements RequestHandler<Map<String, Object>, 
 
         if (faceRecords.size() <= 0) {
             HashMap<String, Object> output = new HashMap<>();
-            output.put("error", "no face detect");
-            output.put("description", "Please insert face image.");
+            output.put(ApiParameter.errorResponse.ERROR, "no face detect");
+            output.put(ApiParameter.errorResponse.DESC, "Please insert face image.");
             Response response = new Response(Config.ResponeseKey, output);
             return ApiGatewayResponse.builder()
                     .setStatusCode(400)
                     .setObjectBody(response)
-                    .setHeaders(Collections.singletonMap("Rekognition", "Rekognition - user data post"))
+                    .setHeaders(defaultHeader)
                     .build();
         }
 
+        //Initial table
+        LOG.info("Initial Table");
         DynamoDB dynamoDB = new DynamoDB(amazonDynamoDB);
-
         Table userTable = dynamoDB.getTable(user_table_name);
         Table rekTable = dynamoDB.getTable(rek_table_name);
 
+        //AddUser to Table
+        LOG.info("Add User to : "+user_table_name);
         Item userItem = new Item()
                 .withPrimaryKey(TableHeader.EMAIL, email)
                 .withString(TableHeader.NAME, firstname)
@@ -141,22 +136,22 @@ public class postUserDataHandler implements RequestHandler<Map<String, Object>, 
         userTable.putItem(userItem);
 
 
-        String faceDetectTxt = "";
+//        String faceDetectTxt = "";
 
+        // Add FaceId to Rek Table
+        LOG.info("Add FaceId to : " + rek_table_name);
         for (FaceRecord faceRecord : faceRecords) {
             int itemAcumulate = 0;
             String faceId = faceRecord.getFace().getFaceId();
             String imageId = faceRecord.getFace().getImageId();
-            faceDetectTxt += "Face detected: Faceid is " +
-                    faceId + "/n";
+//            String externalImageId = faceRecord.getFace().getExternalImageId();
+//            faceDetectTxt += "Face detected: Faceid is " +
+//                    faceId + "/n";
 
-
-//            ScanFilter spec = new ScanFilter(TableHeader.FACE_ID).eq("faceId");
-
+            // filter if already have faceId in Table Should not replace or update.
             ScanSpec scanSpec = new ScanSpec().withProjectionExpression("#faceid,email")
                     .withFilterExpression("#faceid = :inputfaceid").withNameMap(new NameMap().with("#faceid", "faceid"))
                     .withValueMap(new ValueMap().withString(":inputfaceid", faceId));
-
             try {
                 ItemCollection<ScanOutcome> items = userTable.scan(scanSpec);
                 itemAcumulate = items.getAccumulatedItemCount();
@@ -168,30 +163,51 @@ public class postUserDataHandler implements RequestHandler<Map<String, Object>, 
                     LOG.info("face dup : " + item.toString());
                 }
             } catch (Exception e) {
-                System.err.println("Unable to scan the userTable:");
-                System.err.println(e.getMessage());
+                LOG.error("Unable to scan the userTable : "+e.getMessage());
             }
 
             LOG.info("ItemAcumulate : " + itemAcumulate);
-//            if (itemAcumulate <= 0) {
-            Item rekItem = new Item()
-                    .withPrimaryKey(TableHeader.FACE_ID, faceId)
-                    .withString(TableHeader.EMAIL, email)
-                    .withString(TableHeader.IMAGE_ID, imageId);
-            rekTable.putItem(rekItem);
-            LOG.info("Add user data to userTable : " + rekItem.toString());
-//            }else{
-//                LOG.info("Duplicate Face");
-//            }
+            if (itemAcumulate <= 0) {
+                Item rekItem = new Item()
+                        .withPrimaryKey(TableHeader.FACE_ID, faceId)
+                        .withString(TableHeader.EMAIL, email)
+                        .withString(TableHeader.IMAGE_ID, imageId);
+    //                    .withString(TableHeader.EXTERNAL_IMAGE_ID,externalImageId)
+    //                    .withString(TableHeader.IMAGE_URL, imageUrl);
+                rekTable.putItem(rekItem);
+                LOG.info("Add user data to userTable : " + rekItem.toString());
+            }else{
+                LOG.info("Duplicate Face");
+            }
         }
-        System.out.println(faceDetectTxt);
-        input.put("FaceDetect", faceRecords.size());
+        LOG.info(faceRecords.toString());
+        input.put("FaceDetected", faceRecords.size());
+        input.put("FaceDetectedDetail",faceRecords);
         Response response = new Response(Config.ResponeseKey, input);
         return ApiGatewayResponse.builder()
                 .setStatusCode(200)
                 .setObjectBody(response)
-                .setHeaders(Collections.singletonMap("Rekognition", "Rekognition - user data post"))
+                .setHeaders(defaultHeader)
                 .build();
+    }
+
+    private boolean getInputData(Map<String, Object> input) {
+        key = input.get(ApiParameter.PostUserData.KEY) != null ? input.get(ApiParameter.PostUserData.KEY).toString() : "";
+        fileName = input.get(ApiParameter.PostUserData.FILE_NAME) != null ? input.get(ApiParameter.PostUserData.FILE_NAME).toString() : "";
+        birthday = input.get(ApiParameter.PostUserData.BIRTHDAY) != null ? input.get(ApiParameter.PostUserData.BIRTHDAY).toString() : "";
+        bucket = input.get(ApiParameter.PostUserData.BUCKET) != null ? input.get(ApiParameter.PostUserData.BUCKET).toString() : "";
+        description = input.get(ApiParameter.PostUserData.DESCRIPTION) != null ? input.get(ApiParameter.PostUserData.DESCRIPTION).toString() : "";
+        email = input.get(ApiParameter.PostUserData.EMAIL) != null ? input.get(ApiParameter.PostUserData.EMAIL).toString() : "";
+        firstname = input.get(ApiParameter.PostUserData.FIRSTNAME) != null ? input.get(ApiParameter.PostUserData.FIRSTNAME).toString() : "";
+        surename = input.get(ApiParameter.PostUserData.SURENAME) != null ? input.get(ApiParameter.PostUserData.SURENAME).toString() : "";
+        nickname = input.get(ApiParameter.PostUserData.NICKNAME) != null ? input.get(ApiParameter.PostUserData.NICKNAME).toString() : "";
+        phone = input.get(ApiParameter.PostUserData.PHONE) != null ? input.get(ApiParameter.PostUserData.PHONE).toString() : "";
+        imageUrl = input.get(ApiParameter.PostUserData.IMAGEURL) != null ? input.get(ApiParameter.PostUserData.IMAGEURL).toString() : "";
+
+        if (key == "" || bucket == "" || email == "" || firstname == "") {
+           return false;
+        }
+        return true;
     }
 
     private static CreateCollectionResult callCreateCollection(String collectionId,
@@ -233,14 +249,14 @@ public class postUserDataHandler implements RequestHandler<Map<String, Object>, 
         return false;
     }
 
-    private static Image getImageUtil(String bucket, String key) {
+    private Image getImageUtil(String bucket, String key) {
         return new Image()
                 .withS3Object(new S3Object()
                         .withBucket(bucket)
                         .withName(key));
     }
 
-    private static IndexFacesResult callIndexFaces(String collectionId, String externalImageId,
+    private IndexFacesResult callIndexFaces(String collectionId, String externalImageId,
                                                    String attributes, Image image, AmazonRekognition amazonRekognition) {
         IndexFacesRequest indexFacesRequest = new IndexFacesRequest()
                 .withImage(image)
@@ -251,7 +267,7 @@ public class postUserDataHandler implements RequestHandler<Map<String, Object>, 
 
     }
 
-    private static ListFacesResult callListFaces(String collectionId, int limit,
+    private ListFacesResult callListFaces(String collectionId, int limit,
                                                  String paginationToken, AmazonRekognition amazonRekognition) {
         ListFacesRequest listFacesRequest = new ListFacesRequest()
                 .withCollectionId(collectionId)

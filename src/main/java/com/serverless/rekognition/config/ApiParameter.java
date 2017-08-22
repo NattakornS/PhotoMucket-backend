@@ -52,4 +52,10 @@ public class ApiParameter {
         String BUCKET = "bucket";
         String KEY = "key";
     }
+
+    public interface errorResponse{
+        String ERROR ="error";
+        String DESC = "description";
+    }
+
 }
