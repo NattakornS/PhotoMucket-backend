@@ -38,9 +38,9 @@ public class getUserDataHandler implements RequestHandler<Map<String, Object>, A
 
     private static final Logger LOG = Logger.getLogger(getUserDataHandler.class);
     private Float threshold = 70F;
-    private int maxFaces = 2;
+    private int maxFaces = 10;
 
-    public HashMap  getUrl_faceMatches(List<String> face_id)
+    public List<String>  getUrl_faceMatches(List<String> face_id)
     {
 
         Map<String, Object> output_return = new HashMap<>();
@@ -109,8 +109,8 @@ public class getUserDataHandler implements RequestHandler<Map<String, Object>, A
             }
 
         }
-        output_return.put("data",detail_user_json);
-        return (HashMap) output_return;
+//        output_return.put("data",detail_user_json);
+        return detail_user_json;
     }
 
     @Override
@@ -145,7 +145,8 @@ public class getUserDataHandler implements RequestHandler<Map<String, Object>, A
         headers.put("Access-Control-Allow-Origin","*");
         headers.put("Access-Control-Allow-Credentials","true");
         headers.put("Access-Control-Allow-Methods","GET,PUT,POST,DELETE");
-        String bucketname =System.getenv(Config.BUCKET_NAME);
+        String bucketName =System.getenv(Config.BUCKET_NAME);
+        String folderName = System.getenv(Config.REGISTER_FOLDER_NAME);
         try {
             AmazonRekognition amazonRekognition = AmazonRekognitionClientBuilder.standard().withRegion(Regions.US_EAST_1).build();
             Image source = getImageUtil(bucket, key);
@@ -155,18 +156,21 @@ public class getUserDataHandler implements RequestHandler<Map<String, Object>, A
                 LOG.info("faceMatch:"+searchFacesByImageResult.getFaceMatches());
                 for(int i=0 ;i<searchFacesByImageResult.getFaceMatches().size();i++)
                 {
-                face_id.add(searchFacesByImageResult.getFaceMatches().get(i).getFace().getFaceId().toString());
-                ExternalImageId.add(S3_URL+"/"+bucketname+"/"+searchFacesByImageResult.getFaceMatches().get(i).getFace().getExternalImageId());
-                LOG.info("Add FaceID to Array:"+searchFacesByImageResult.getFaceMatches().get(i).getFace().getFaceId().toString());
+                    face_id.add(searchFacesByImageResult.getFaceMatches().get(i).getFace().getFaceId().toString());
+                    ExternalImageId.add(S3_URL+"/"+bucketName+"/"+folderName+"/"+searchFacesByImageResult.getFaceMatches().get(i).getFace().getExternalImageId());
+                    LOG.info("Add FaceID to Array:"+searchFacesByImageResult.getFaceMatches().get(i).getFace().getFaceId().toString());
                 }
 
             }else{
                 LOG.info("Not Found FaceMatch :");
             }
 
-            Map<String, Object> output2 =getUrl_faceMatches(face_id);
-            output_response =output2;
-            output_response.put("profile",ExternalImageId);
+            List<String> faceMatchesList = getUrl_faceMatches(face_id);
+
+            output_response.put("data",faceMatchesList);
+            if (faceMatchesList.size()>0) {
+                output_response.put("profile", ExternalImageId);
+            }
 
         }catch (Exception error)
         {

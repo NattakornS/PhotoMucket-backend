@@ -141,6 +141,7 @@ public class generateSignUrlHandler implements RequestHandler<Map<String, Object
             output.put(ApiParameter.ResponseSignURL.IMAGE_URL, imageUrl);
             output.put(ApiParameter.ResponseSignURL.KEY_NAME, keyName);
             output.put(ApiParameter.ResponseSignURL.BUCKET_NAME, bucketName);
+            output.put(ApiParameter.ResponseSignURL.FILE_NAME, s3FileName);
             response = new Response("generateURL", output);
 
 //        String body = "signUrl : "+signUrlString+","+"url : " +prefixUrl+keyName;

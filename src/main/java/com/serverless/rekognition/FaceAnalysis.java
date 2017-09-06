@@ -37,54 +37,54 @@ public class FaceAnalysis implements RequestHandler<Map<String, Object> , ApiGat
         DetectFacesRequest request = new DetectFacesRequest()
                 .withImage(source)
                 .withAttributes(Attribute.ALL);
-
-        try {
+        List< FaceDetail > faceDetails = null;
+//        try {
             DetectFacesResult result = rekognitionClient.detectFaces(request);
-            List< FaceDetail > faceDetails = result.getFaceDetails();
+             faceDetails = result.getFaceDetails();
             LOG.info(faceDetails.toString());
 
-            for (FaceDetail face: faceDetails) {
-                if (request.getAttributes().contains("ALL")) {
-                    AgeRange ageRange = face.getAgeRange();
-                    String facre =face.toString();
-                    System.out.println("facre:"+facre);
-                    output_response.put("detailface",face);
+//            for (FaceDetail face: faceDetails) {
+//                if (request.getAttributes().contains("ALL")) {
+//                    AgeRange ageRange = face.getAgeRange();
+//                    String facre =face.toString();
+//                    System.out.println("facre:"+facre);
+//                    output_response.put("detailface",face);
+//
+//                    System.out.println("The detected face is estimated to be between "
+//                            + ageRange.getLow().toString() + " and " + ageRange.getHigh().toString()
+//                            + " years old.");
+//
+//
+//                    String Emotions = face.getEmotions().toString();
+//                    System.out.println("emogination:"+Emotions);
+//
+//                    String Gender = face.getGender().toString();
+//                    System.out.println("Gender:"+Gender);
+//
+//                    String Smile = face.getSmile().toString();
+//                    System.out.println("Smile:"+Smile);
+//
+//                    String Sunglasses = face.getSunglasses().toString();
+//                    System.out.println("Sunglasses:"+Sunglasses);
+//
+//                    System.out.println("Here's the complete set of attributes:");
+//                } else { // non-default attributes have null values.
+//                    System.out.println("Here's the default set of attributes:");
+//                }
+//
+////                ObjectMapper objectMapper = new ObjectMapper();
+//
+////                System.out.println(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(face));
+//            }
 
-                    System.out.println("The detected face is estimated to be between "
-                            + ageRange.getLow().toString() + " and " + ageRange.getHigh().toString()
-                            + " years old.");
-
-
-                    String Emotions = face.getEmotions().toString();
-                    System.out.println("emogination:"+Emotions);
-
-                    String Gender = face.getGender().toString();
-                    System.out.println("Gender:"+Gender);
-
-                    String Smile = face.getSmile().toString();
-                    System.out.println("Smile:"+Smile);
-
-                    String Sunglasses = face.getSunglasses().toString();
-                    System.out.println("Sunglasses:"+Sunglasses);
-
-                    System.out.println("Here's the complete set of attributes:");
-                } else { // non-default attributes have null values.
-                    System.out.println("Here's the default set of attributes:");
-                }
-
-                ObjectMapper objectMapper = new ObjectMapper();
-
-//                System.out.println(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(face));
-            }
-
-        } catch (AmazonRekognitionException e) {
-            e.printStackTrace();
-        }
+//        } catch (AmazonRekognitionException e) {
+//            e.printStackTrace();
+//        }
 
 
         return ApiGatewayResponse.builder()
                 .setStatusCode(200)
-                .setObjectBody(output_response)
+                .setObjectBody(faceDetails)
                 .setHeaders(headers)
                 .build();
     }

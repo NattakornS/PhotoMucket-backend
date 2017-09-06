@@ -4,11 +4,9 @@ import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.document.*;
-import com.amazonaws.services.dynamodbv2.document.spec.ScanSpec;
-import com.amazonaws.services.dynamodbv2.document.utils.NameMap;
-import com.amazonaws.services.dynamodbv2.document.utils.ValueMap;
-import com.amazonaws.services.dynamodbv2.xspec.L;
+import com.amazonaws.services.dynamodbv2.document.DynamoDB;
+import com.amazonaws.services.dynamodbv2.document.Item;
+import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.rekognition.AmazonRekognition;
@@ -19,7 +17,10 @@ import com.serverless.rekognition.config.Config;
 import com.serverless.rekognition.config.TableHeader;
 import org.apache.log4j.Logger;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class postUserDataHandler implements RequestHandler<Map<String, Object>, ApiGatewayResponse> {
 
@@ -61,7 +62,7 @@ public class postUserDataHandler implements RequestHandler<Map<String, Object>, 
 
         boolean getInputBool = getInputData(input);
 
-        if (getInputBool){
+        if (!getInputBool){
             HashMap<String, Object> output = new HashMap<>();
             output.put("error", "invalid body");
             Response response = new Response(Config.ResponeseKey, output);
@@ -141,7 +142,7 @@ public class postUserDataHandler implements RequestHandler<Map<String, Object>, 
         // Add FaceId to Rek Table
         LOG.info("Add FaceId to : " + rek_table_name);
         for (FaceRecord faceRecord : faceRecords) {
-            int itemAcumulate = 0;
+//            int itemAcumulate = 0;
             String faceId = faceRecord.getFace().getFaceId();
             String imageId = faceRecord.getFace().getImageId();
 //            String externalImageId = faceRecord.getFace().getExternalImageId();
@@ -149,25 +150,25 @@ public class postUserDataHandler implements RequestHandler<Map<String, Object>, 
 //                    faceId + "/n";
 
             // filter if already have faceId in Table Should not replace or update.
-            ScanSpec scanSpec = new ScanSpec().withProjectionExpression("#faceid,email")
-                    .withFilterExpression("#faceid = :inputfaceid").withNameMap(new NameMap().with("#faceid", "faceid"))
-                    .withValueMap(new ValueMap().withString(":inputfaceid", faceId));
-            try {
-                ItemCollection<ScanOutcome> items = userTable.scan(scanSpec);
-                itemAcumulate = items.getAccumulatedItemCount();
-                Iterator<Item> iter = items.iterator();
-
-                while (iter.hasNext()) {
-                    itemAcumulate++;
-                    Item item = iter.next();
-                    LOG.info("face dup : " + item.toString());
-                }
-            } catch (Exception e) {
-                LOG.error("Unable to scan the userTable : "+e.getMessage());
-            }
-
-            LOG.info("ItemAcumulate : " + itemAcumulate);
-            if (itemAcumulate <= 0) {
+//            ScanSpec scanSpec = new ScanSpec().withProjectionExpression("#faceid,email")
+//                    .withFilterExpression("#faceid = :inputfaceid").withNameMap(new NameMap().with("#faceid", "faceid"))
+//                    .withValueMap(new ValueMap().withString(":inputfaceid", faceId));
+//            try {
+//                ItemCollection<ScanOutcome> items = rekTable.scan(scanSpec);
+//                itemAcumulate = items.getAccumulatedItemCount();
+//                Iterator<Item> iter = items.iterator();
+//
+//                while (iter.hasNext()) {
+//                    itemAcumulate++;
+//                    Item item = iter.next();
+//                    LOG.info("face dup : " + item.toString());
+//                }
+//            } catch (Exception e) {
+//                LOG.error("Unable to scan the userTable : "+e.getMessage());
+//            }
+//
+//            LOG.info("ItemAcumulate : " + itemAcumulate);
+//            if (itemAcumulate <= 0) {
                 Item rekItem = new Item()
                         .withPrimaryKey(TableHeader.FACE_ID, faceId)
                         .withString(TableHeader.EMAIL, email)
@@ -176,13 +177,14 @@ public class postUserDataHandler implements RequestHandler<Map<String, Object>, 
     //                    .withString(TableHeader.IMAGE_URL, imageUrl);
                 rekTable.putItem(rekItem);
                 LOG.info("Add user data to userTable : " + rekItem.toString());
-            }else{
-                LOG.info("Duplicate Face");
-            }
+//            }else{
+//                LOG.info("Duplicate Face");
+//            }
         }
         LOG.info(faceRecords.toString());
         input.put("FaceDetected", faceRecords.size());
         input.put("FaceDetectedDetail",faceRecords);
+        input.put("Success",true);
         Response response = new Response(Config.ResponeseKey, input);
         return ApiGatewayResponse.builder()
                 .setStatusCode(200)
